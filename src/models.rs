@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// タスクの状態 (Phase)
+/// Task state (Phase)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TaskState {
@@ -24,7 +24,7 @@ impl fmt::Display for TaskState {
     }
 }
 
-/// タスク
+/// Task
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: u32,
@@ -36,9 +36,9 @@ pub struct Task {
     pub created_at: NaiveDate,
 }
 
-/// 相対日付 ("3d", "1w") または絶対日付 ("2026-03-01") をパースして NaiveDate を返す
+/// Parses a date specification string, either relative ("3d", "1w") or absolute ("2026-03-01"), into a NaiveDate.
 pub fn parse_date_spec(spec: &str, base: NaiveDate) -> anyhow::Result<NaiveDate> {
-    // 相対日付: 数値 + 'd' or 'w'
+    // Relative date: Number + 'd' or 'w'
     if let Some(num_str) = spec.strip_suffix('d') {
         let days: i64 = num_str
             .parse()
@@ -55,7 +55,7 @@ pub fn parse_date_spec(spec: &str, base: NaiveDate) -> anyhow::Result<NaiveDate>
             .checked_add_days(chrono::Days::new((weeks * 7) as u64))
             .ok_or_else(|| anyhow::anyhow!("Date overflow"));
     }
-    // 絶対日付: YYYY-MM-DD
+    // Absolute date: YYYY-MM-DD
     NaiveDate::parse_from_str(spec, "%Y-%m-%d")
         .map_err(|e| anyhow::anyhow!("Invalid date format '{spec}': {e}"))
 }

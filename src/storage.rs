@@ -6,25 +6,25 @@ use anyhow::{Context, Result};
 use crate::config::Config;
 use crate::models::Task;
 
-/// ローカルJSONファイルによるタスクストレージ
+/// Task storage using a local JSON file
 pub struct TaskStore {
     path: PathBuf,
 }
 
 impl TaskStore {
-    /// 設定に基づいたパスでストアを作成
+    /// Create a store with a path based on the configuration
     pub fn from_config(config: &Config) -> Result<Self> {
         let path = config.data_file_path()?;
         Ok(Self { path })
     }
 
-    /// 指定パスでストアを作成 (テスト用)
+    /// Create a store with a specific path (for testing)
     #[cfg(test)]
     pub fn new_with_path(path: PathBuf) -> Self {
         Self { path }
     }
 
-    /// タスク一覧を読み込む。ファイルが存在しない場合は空のVecを返す。
+    /// Load the task list. Returns an empty Vec if the file does not exist.
     pub fn load(&self) -> Result<Vec<Task>> {
         if !self.path.exists() {
             return Ok(Vec::new());
@@ -39,7 +39,7 @@ impl TaskStore {
         Ok(tasks)
     }
 
-    /// タスク一覧を保存する
+    /// Save the task list
     pub fn save(&self, tasks: &[Task]) -> Result<()> {
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent)
@@ -51,7 +51,7 @@ impl TaskStore {
         Ok(())
     }
 
-    /// 次のIDを取得する (既存最大ID + 1、なければ1)
+    /// Get the next ID (existing maximum ID + 1, or 1 if none exist)
     pub fn next_id(tasks: &[Task]) -> u32 {
         tasks.iter().map(|t| t.id).max().unwrap_or(0) + 1
     }

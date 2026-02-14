@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use serde::Deserialize;
 
-/// アプリケーション設定
+/// Application configuration
 #[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "Config::default_defaults")]
@@ -15,14 +15,14 @@ pub struct Config {
 
 #[derive(Debug, Deserialize)]
 pub struct DefaultsConfig {
-    /// freeze時のデフォルト解凍日数
+    /// Default number of thaw days when freezing
     #[serde(default = "default_thaw_days")]
     pub thaw_days: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct StorageConfig {
-    /// tasks.json のパス (未指定時は ~/.config/kelvin/tasks.json)
+    /// Path to tasks.json (defaults to ~/.config/kelvin/tasks.json if not specified)
     #[serde(default)]
     pub data_file: Option<String>,
 }
@@ -40,7 +40,7 @@ impl Config {
         StorageConfig { data_file: None }
     }
 
-    /// 設定ファイルを読み込む。ファイルが存在しない場合はデフォルト値を返す。
+    /// Loads the configuration file. Returns default values if the file does not exist.
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
         if !path.exists() {
@@ -51,7 +51,7 @@ impl Config {
         Ok(config)
     }
 
-    /// Kelvin の設定ディレクトリ (~/.config/kelvin/)
+    /// Kelvin's configuration directory (~/.config/kelvin/)
     pub fn kelvin_dir() -> Result<PathBuf> {
         let home = dirs::home_dir()
             .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
@@ -62,7 +62,7 @@ impl Config {
         Ok(Self::kelvin_dir()?.join("config.toml"))
     }
 
-    /// tasks.json のパスを取得する (config で上書き可能)
+    /// Gets the path to tasks.json (can be overridden in the configuration)
     pub fn data_file_path(&self) -> Result<PathBuf> {
         match &self.storage.data_file {
             Some(custom_path) => {

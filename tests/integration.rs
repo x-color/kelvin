@@ -1,10 +1,10 @@
 use std::process::Command;
 
-/// ヘルパー: kelvinバイナリのコマンドを構築 (テスト用のdata dirを使用)
+/// Helper: Construct a command for the kelvin binary (uses a test data directory)
 fn kelvin_cmd() -> Command {
     let cmd = Command::new(env!("CARGO_BIN_EXE_kelvin"));
-    // テスト用の設定・データディレクトリを指定するため
-    // HOME を一時ディレクトリに設定
+    // To specify the configuration and data directory for testing
+    // Set HOME to a temporary directory
     cmd
 }
 
@@ -35,7 +35,7 @@ fn add_and_list_workflow() {
     let dir = tempfile::tempdir().unwrap();
     let config_dir = dir.path().join(".config");
 
-    // タスク追加 (Melted)
+    // Add a task (Melted)
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -46,7 +46,7 @@ fn add_and_list_workflow() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Added task"));
 
-    // リスト表示
+    // List tasks
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -63,7 +63,7 @@ fn add_iced_and_list_iced() {
     let dir = tempfile::tempdir().unwrap();
     let config_dir = dir.path().join(".config");
 
-    // Icedタスク追加
+    // Add an Iced task
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -74,7 +74,7 @@ fn add_iced_and_list_iced() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Iced"));
 
-    // デフォルトlistには表示されない
+    // Not displayed in the default list
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -85,7 +85,7 @@ fn add_iced_and_list_iced() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains("Future task"));
 
-    // --iced で表示される
+    // Displayed with --iced
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -102,7 +102,7 @@ fn burn_removes_from_list() {
     let dir = tempfile::tempdir().unwrap();
     let config_dir = dir.path().join(".config");
 
-    // タスク追加
+    // Add a task
     Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -121,7 +121,7 @@ fn burn_removes_from_list() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Burned"));
 
-    // リストから消えている
+    // Removed from the list
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -138,7 +138,7 @@ fn cool_restores_task() {
     let dir = tempfile::tempdir().unwrap();
     let config_dir = dir.path().join(".config");
 
-    // add → burn → cool
+    // add -> burn -> cool
     Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -163,7 +163,7 @@ fn cool_restores_task() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Cooled"));
 
-    // リストに戻る
+    // Return to the list
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -204,7 +204,7 @@ fn freeze_and_warm() {
     let dir = tempfile::tempdir().unwrap();
     let config_dir = dir.path().join(".config");
 
-    // add → freeze → warm
+    // add -> freeze -> warm
     Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -256,7 +256,7 @@ fn edit_task_title() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("New title"));
 
-    // list で確認
+    // Verify with list
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)

@@ -3,8 +3,8 @@ use chrono::NaiveDate;
 
 use crate::models::{Task, TaskState};
 
-/// コマンド実行時に、解凍予定日を過ぎた Iced タスクを自動的に Melting に遷移させる。
-/// 変更されたタスクの数を返す。
+/// Automatically transition Iced tasks that have passed their thaw date to the Melting state during command execution.
+/// Returns the number of tasks that were updated.
 pub fn auto_warm(tasks: &mut [Task], today: NaiveDate) -> u32 {
     let mut count = 0;
     for task in tasks.iter_mut() {
@@ -20,7 +20,7 @@ pub fn auto_warm(tasks: &mut [Task], today: NaiveDate) -> u32 {
     count
 }
 
-/// Melting/Iced → Melted: タスクを着手可能状態にする
+/// Melting/Iced -> Melted: Set the task to a ready (Melted) state.
 pub fn warm(task: &mut Task) -> Result<()> {
     match task.state {
         TaskState::Melting | TaskState::Iced => {
@@ -36,7 +36,7 @@ pub fn warm(task: &mut Task) -> Result<()> {
     }
 }
 
-/// Melted/Iced → Evaporated: タスクを完了させる
+/// Melted/Iced -> Evaporated: Complete (evaporate) the task.
 pub fn burn(task: &mut Task) -> Result<()> {
     match task.state {
         TaskState::Melted | TaskState::Iced => {
@@ -51,7 +51,7 @@ pub fn burn(task: &mut Task) -> Result<()> {
     }
 }
 
-/// Evaporated → Melted: 完了を取り消す
+/// Evaporated -> Melted: Cancel completion and return the task to a Melted state.
 pub fn cool(task: &mut Task) -> Result<()> {
     match task.state {
         TaskState::Evaporated => {
@@ -67,7 +67,7 @@ pub fn cool(task: &mut Task) -> Result<()> {
     }
 }
 
-/// 任意の State → Iced: 再冷凍する。解凍予定日を必須とする。
+/// Any State -> Iced: Refreeze the task. A thaw date is required.
 pub fn freeze(task: &mut Task, thaw_date: NaiveDate) -> Result<()> {
     task.state = TaskState::Iced;
     task.thaw_date = Some(thaw_date);

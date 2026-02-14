@@ -8,7 +8,7 @@ use crate::models::{parse_date_spec, Task, TaskState};
 use crate::state;
 use crate::storage::TaskStore;
 
-/// 状態に応じた色付き文字列を返す
+/// Returns a colored string based on the task state
 fn colored_state(state: TaskState) -> String {
     let label = state.to_string();
     match state {
@@ -19,7 +19,7 @@ fn colored_state(state: TaskState) -> String {
     }
 }
 
-/// 色付き文字列を指定幅にパディングする (ANSI codes の外側にスペースを追加)
+/// Pads a colored string to a specified width (adds spaces outside the ANSI codes)
 fn colored_state_padded(state: TaskState, width: usize) -> String {
     let visible_len = state.to_string().len();
     let colored = colored_state(state);
@@ -27,12 +27,12 @@ fn colored_state_padded(state: TaskState, width: usize) -> String {
     format!("{colored}{}", " ".repeat(padding))
 }
 
-/// 日付を文字列に変換 (None は "-")
+/// Converts a date to a string (None becomes "-")
 fn date_str(date: Option<chrono::NaiveDate>) -> String {
     date.map(|d| d.to_string()).unwrap_or_else(|| "-".to_string())
 }
 
-/// コマンド実行のメインディスパッチャ
+/// Main dispatcher for command execution
 pub fn execute(command: Commands) -> Result<()> {
     let config = Config::load()?;
     let store = TaskStore::from_config(&config)?;
@@ -80,7 +80,7 @@ pub fn execute(command: Commands) -> Result<()> {
     Ok(())
 }
 
-/// タスクを追加する
+/// Adds a new task
 fn cmd_add(
     store: &TaskStore,
     title: &str,
@@ -127,7 +127,7 @@ fn cmd_add(
     Ok(())
 }
 
-/// タスクを編集する
+/// Edits an existing task
 fn cmd_edit(
     store: &TaskStore,
     id: u32,
@@ -169,7 +169,7 @@ fn cmd_edit(
     Ok(())
 }
 
-/// タスクの詳細を表示する
+/// Shows task details
 fn cmd_show(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
     let mut tasks = store.load()?;
     state::auto_warm(&mut tasks, today);
@@ -193,8 +193,8 @@ fn cmd_show(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
     Ok(())
 }
 
-/// タスク一覧を表示する
-/// カラム順: ID, Task, State, Thaw Date, Due Date
+/// Lists tasks
+/// Column order: ID, Task, State, Thaw Date, Due Date
 fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) -> Result<()> {
     let mut tasks = store.load()?;
     let warmed = state::auto_warm(&mut tasks, today);
@@ -210,7 +210,7 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
             .filter(|t| t.state == TaskState::Iced)
             .collect()
     } else {
-        // デフォルト: Melting と Melted のみ
+        // Default: Only Melting and Melted tasks
         tasks
             .iter()
             .filter(|t| t.state == TaskState::Melting || t.state == TaskState::Melted)
@@ -222,18 +222,18 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
         return Ok(());
     }
 
-    // カラム幅の定義
+    // Define column widths
     let id_w = 5;
     let task_w = filtered
         .iter()
         .map(|t| t.title.len())
         .max()
         .unwrap_or(4)
-        .max(4); // "Task" の長さ以上
-    let state_w = 11; // "Evaporated" = 10 + 余白
-    let date_w = 12; // "YYYY-MM-DD" = 10 + 余白
+        .max(4); // At least the length of "Task"
+    let state_w = 11; // "Evaporated" = 10 + margin
+    let date_w = 12; // "YYYY-MM-DD" = 10 + margin
 
-    // ヘッダー (bold もANSIコードを含むため、手動パディング)
+    // Header (since bold text includes ANSI codes, padding is manual)
     println!(
         "{}  {}  {}  {}  {}",
         format!("{:<id_w$}", "ID").bold(),
@@ -259,7 +259,7 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
     Ok(())
 }
 
-/// Melting/Iced → Melted
+/// Melting/Iced -> Melted
 fn cmd_warm(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
     let mut tasks = store.load()?;
     state::auto_warm(&mut tasks, today);
@@ -279,7 +279,7 @@ fn cmd_warm(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
     Ok(())
 }
 
-/// Melted/Iced → Evaporated
+/// Melted/Iced -> Evaporated
 fn cmd_burn(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
     let mut tasks = store.load()?;
     state::auto_warm(&mut tasks, today);
@@ -299,7 +299,7 @@ fn cmd_burn(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
     Ok(())
 }
 
-/// Evaporated → Melted
+/// Evaporated -> Melted
 fn cmd_cool(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
     let mut tasks = store.load()?;
     state::auto_warm(&mut tasks, today);
@@ -319,7 +319,7 @@ fn cmd_cool(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
     Ok(())
 }
 
-/// 任意 → Iced
+/// Any State -> Iced
 fn cmd_freeze(
     store: &TaskStore,
     id: u32,
@@ -338,7 +338,7 @@ fn cmd_freeze(
     let thaw_date = match thaw_date_spec {
         Some(spec) => parse_date_spec(spec, today)?,
         None => {
-            // config からデフォルト解凍日数を取得
+            // Get the default number of thaw days from config
             today
                 .checked_add_days(chrono::Days::new(config.defaults.thaw_days as u64))
                 .ok_or_else(|| anyhow::anyhow!("Date overflow"))?
