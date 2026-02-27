@@ -62,10 +62,13 @@ pub enum Commands {
         id: u32,
     },
 
-    /// Complete (evaporate) a task (Melted/Iced -> Evaporated)
+    /// Complete (evaporate) a task (Melted/Iced -> Evaporated), or permanently delete it with --completely
     Burn {
         /// Task ID
         id: u32,
+        /// Permanently delete the task instead of moving it to Evaporated
+        #[arg(short = 'c', long = "completely")]
+        completely: bool,
     },
 
     /// Cancel completion (Evaporated -> Melted)

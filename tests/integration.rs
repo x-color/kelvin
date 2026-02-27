@@ -423,3 +423,125 @@ fn edit_title_does_not_change_thaw_date() {
         "old title should be gone"
     );
 }
+
+// ── burn --completely tests ───────────────────────────────────────────────────
+
+/// `burn --completely` permanently deletes the task (not visible even in --all).
+#[test]
+fn burn_completely_deletes_task() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    // Add a task
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "DeleteMe"])
+        .output()
+        .unwrap();
+
+    // burn --completely
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["burn", "1", "--completely"])
+        .output()
+        .expect("Failed to execute kelvin burn --completely");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Completely burned"),
+        "output should confirm complete deletion"
+    );
+
+    // Must not appear even in --all
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list", "--all"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("DeleteMe"),
+        "completely burned task must not appear in --all"
+    );
+}
+
+/// `burn -c` (short flag) is equivalent to `burn --completely`.
+#[test]
+fn burn_c_short_flag_deletes_task() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "ShortFlagTask"])
+        .output()
+        .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["burn", "1", "-c"])
+        .output()
+        .expect("Failed to execute kelvin burn -c");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Completely burned"));
+
+    // Verify gone from storage
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list", "--all"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(!stdout.contains("ShortFlagTask"));
+}
+
+/// `burn --completely` on an Evaporated task also deletes it permanently.
+#[test]
+fn burn_completely_evaporated_task() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "AlreadyBurned"])
+        .output()
+        .unwrap();
+
+    // First burn normally -> Evaporated
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["burn", "1"])
+        .output()
+        .unwrap();
+
+    // Now completely delete it
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["burn", "1", "--completely"])
+        .output()
+        .expect("Failed to execute kelvin burn --completely on Evaporated task");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Completely burned"));
+
+    // Gone from storage
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list", "--all"])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(!stdout.contains("AlreadyBurned"));
+}
+

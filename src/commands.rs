@@ -68,7 +68,7 @@ pub fn execute(command: Commands) -> Result<()> {
         Commands::Show { id } => cmd_show(&store, id, today)?,
         Commands::List { iced, all } => cmd_list(&store, iced, all, today)?,
         Commands::Warm { id } => cmd_warm(&store, id, today)?,
-        Commands::Burn { id } => cmd_burn(&store, id, today)?,
+        Commands::Burn { id, completely } => cmd_burn(&store, id, completely, today)?,
         Commands::Cool { id } => cmd_cool(&store, id, today)?,
         Commands::Freeze { id, thaw_date } => {
             cmd_freeze(&store, id, thaw_date.as_deref(), today, &config)?
@@ -273,21 +273,30 @@ fn cmd_warm(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
     Ok(())
 }
 
-/// Melted/Iced -> Evaporated
-fn cmd_burn(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
+/// Melted/Iced -> Evaporated, or permanently delete the task with completely=true
+fn cmd_burn(store: &TaskStore, id: u32, completely: bool, today: chrono::NaiveDate) -> Result<()> {
     let mut tasks = store.load()?;
     state::auto_warm(&mut tasks, today);
 
-    let task = tasks
-        .iter_mut()
-        .find(|t| t.id == id)
-        .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+    if completely {
+        let pos = tasks
+            .iter()
+            .position(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+        let task = tasks.remove(pos);
+        println!("Completely burned task {}: {}", task.id, task.title);
+    } else {
+        let task = tasks
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
 
-    state::burn(task)?;
-    println!(
-        "Burned task {} [{}]: {}",
-        task.id, task.state, task.title
-    );
+        state::burn(task)?;
+        println!(
+            "Burned task {} [{}]: {}",
+            task.id, task.state, task.title
+        );
+    }
 
     store.save(&tasks)?;
     Ok(())
