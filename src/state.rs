@@ -36,15 +36,15 @@ pub fn warm(task: &mut Task) -> Result<()> {
     }
 }
 
-/// Melted/Iced -> Evaporated: Complete (evaporate) the task.
+/// Melted/Melting/Iced -> Evaporated: Complete (evaporate) the task.
 pub fn burn(task: &mut Task) -> Result<()> {
     match task.state {
-        TaskState::Melted | TaskState::Iced => {
+        TaskState::Melted | TaskState::Melting | TaskState::Iced => {
             task.state = TaskState::Evaporated;
             Ok(())
         }
         _ => bail!(
-            "Cannot burn task {} (state: {}). Only Melted or Iced tasks can be burned.",
+            "Cannot burn task {} (state: {}). Only Melted, Melting, or Iced tasks can be burned.",
             task.id,
             task.state
         ),
@@ -160,6 +160,13 @@ mod tests {
     #[test]
     fn burn_melted_to_evaporated() {
         let mut task = make_task(TaskState::Melted, None);
+        burn(&mut task).unwrap();
+        assert_eq!(task.state, TaskState::Evaporated);
+    }
+
+    #[test]
+    fn burn_melting_to_evaporated() {
+        let mut task = make_task(TaskState::Melting, None);
         burn(&mut task).unwrap();
         assert_eq!(task.state, TaskState::Evaporated);
     }
