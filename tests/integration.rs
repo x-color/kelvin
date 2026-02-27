@@ -267,3 +267,159 @@ fn edit_task_title() {
     assert!(stdout.contains("New title"));
     assert!(!stdout.contains("Old title"));
 }
+
+// ── Thaw-date ownership tests ─────────────────────────────────────────────────
+
+/// `edit` must reject the `--date` / `-d` flag; thaw date is owned by `freeze`.
+#[test]
+fn edit_rejects_date_flag() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    // Create a task first so the binary has something to work with.
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "Some task"])
+        .output()
+        .unwrap();
+
+    // Attempt to pass --date to edit; clap should reject this as an unknown flag.
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["edit", "1", "--date", "7d"])
+        .output()
+        .expect("Failed to execute kelvin edit");
+
+    assert!(
+        !output.status.success(),
+        "edit --date should fail; thaw date must not be editable via `edit`"
+    );
+}
+
+/// `freeze` sets the task state to Iced and records the thaw date.
+#[test]
+fn freeze_sets_thaw_date_and_iced_state() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "Freeze me"])
+        .output()
+        .unwrap();
+
+    // Freeze with an explicit date far in the future so it stays Iced.
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["freeze", "1", "--date", "30d"])
+        .output()
+        .expect("Failed to execute kelvin freeze");
+
+    assert!(output.status.success(), "freeze should succeed");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Froze"), "output should confirm freeze");
+    assert!(stdout.contains("Iced"), "state should be Iced after freeze");
+
+    // The task must appear under --iced, not the default list.
+    let iced_out = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list", "--iced"])
+        .output()
+        .unwrap();
+    let iced_stdout = String::from_utf8_lossy(&iced_out.stdout);
+    assert!(
+        iced_stdout.contains("Freeze me"),
+        "frozen task should appear under --iced"
+    );
+
+    let default_out = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list"])
+        .output()
+        .unwrap();
+    let default_stdout = String::from_utf8_lossy(&default_out.stdout);
+    assert!(
+        !default_stdout.contains("Freeze me"),
+        "frozen task should NOT appear in the default list"
+    );
+}
+
+/// Editing an Iced task's title must not alter its thaw date.
+#[test]
+fn edit_title_does_not_change_thaw_date() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    // Add then freeze with a known date.
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "Original title"])
+        .output()
+        .unwrap();
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["freeze", "1", "--date", "30d"])
+        .output()
+        .unwrap();
+
+    // Capture the thaw date from `show` before editing.
+    let before = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["show", "1"])
+        .output()
+        .unwrap();
+    let before_stdout = String::from_utf8_lossy(&before.stdout);
+    let thaw_line_before = before_stdout
+        .lines()
+        .find(|l| l.contains("Thaw Date:"))
+        .expect("show output should contain 'Thaw Date:'")
+        .to_string();
+
+    // Edit only the title.
+    let edit_out = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["edit", "1", "--title", "Renamed title"])
+        .output()
+        .expect("Failed to execute kelvin edit");
+    assert!(edit_out.status.success(), "edit --title should succeed");
+
+    // Thaw date must be unchanged.
+    let after = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["show", "1"])
+        .output()
+        .unwrap();
+    let after_stdout = String::from_utf8_lossy(&after.stdout);
+    let thaw_line_after = after_stdout
+        .lines()
+        .find(|l| l.contains("Thaw Date:"))
+        .expect("show output should contain 'Thaw Date:'")
+        .to_string();
+
+    assert_eq!(
+        thaw_line_before, thaw_line_after,
+        "edit must not change the thaw date"
+    );
+
+    // Title must be updated.
+    assert!(
+        after_stdout.contains("Renamed title"),
+        "title should be updated"
+    );
+    assert!(
+        !after_stdout.contains("Original title"),
+        "old title should be gone"
+    );
+}

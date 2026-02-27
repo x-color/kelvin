@@ -56,14 +56,12 @@ pub fn execute(command: Commands) -> Result<()> {
             id,
             title,
             description,
-            thaw_date,
             due_date,
         } => cmd_edit(
             &store,
             id,
             title.as_deref(),
             description.as_deref(),
-            thaw_date.as_deref(),
             due_date.as_deref(),
             today,
         )?,
@@ -133,7 +131,6 @@ fn cmd_edit(
     id: u32,
     new_title: Option<&str>,
     new_description: Option<&str>,
-    new_thaw_date: Option<&str>,
     new_due_date: Option<&str>,
     today: chrono::NaiveDate,
 ) -> Result<()> {
@@ -150,9 +147,6 @@ fn cmd_edit(
     }
     if let Some(desc) = new_description {
         task.description = desc.to_string();
-    }
-    if let Some(spec) = new_thaw_date {
-        task.thaw_date = Some(parse_date_spec(spec, today)?);
     }
     if let Some(spec) = new_due_date {
         task.due_date = Some(parse_date_spec(spec, today)?);

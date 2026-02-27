@@ -35,9 +35,6 @@ pub enum Commands {
         /// New description
         #[arg(long = "desc")]
         description: Option<String>,
-        /// Change the thaw date (e.g., 3d, 1w, 2026-03-01)
-        #[arg(short = 'd', long = "date")]
-        thaw_date: Option<String>,
         /// Change the due date (e.g., 3d, 1w, 2026-03-01)
         #[arg(long = "due")]
         due_date: Option<String>,
