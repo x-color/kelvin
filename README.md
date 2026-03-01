@@ -23,6 +23,7 @@ stateDiagram-v2
     Melting --> Iced: freeze
     Melted --> Iced: freeze
     Iced --> Evaporated: burn
+    Melting --> Evaporated: burn
     Melted --> Evaporated: burn
     Evaporated --> Melted: cool
     Evaporated --> Iced: freeze
@@ -74,7 +75,9 @@ ID     Task                 State        Thaw Date     Due Date
 
 ```bash
 kelvin warm <id>          # Melting/Iced → Melted
-kelvin burn <id>          # Melted/Iced → Evaporated (done!)
+kelvin burn <id>          # Melted/Melting/Iced → Evaporated (done!)
+kelvin burn <id> -n "msg" # Add a note when completing a task
+kelvin burn <id> -c       # Completely delete a task
 kelvin cool <id>          # Evaporated → Melted (undo)
 kelvin freeze <id> -d 5d  # Any → Iced (postpone)
 ```
@@ -84,9 +87,11 @@ kelvin freeze <id> -d 5d  # Any → Iced (postpone)
 ```bash
 kelvin edit <id> -t "New title"
 kelvin edit <id> --desc "Updated description"
-kelvin edit <id> -d 3d --due 2026-04-01
+kelvin edit <id> --due 2026-04-01
 kelvin show <id>
 ```
+
+*Note: Thaw dates can only be modified using the `freeze` command to maintain consistency between the task state and its thaw date.*
 
 ### Auto-Thaw
 
@@ -103,12 +108,12 @@ thaw_days = 7
 
 [storage]
 # Custom path for the tasks data file (optional)
-# data_file = "~/my-tasks/kelvin.json"
+# data_file = "~/my-tasks/kelvin.db"
 ```
 
 ## Data Storage
 
-Tasks are stored as JSON at `~/.config/kelvin/tasks.json` by default.
+Tasks are stored in a SQLite database at `~/.config/kelvin/tasks.db` by default.
 
 ## Date Formats
 
