@@ -22,7 +22,7 @@ pub struct DefaultsConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct StorageConfig {
-    /// Path to tasks.json (defaults to ~/.config/kelvin/tasks.json if not specified)
+    /// Path to tasks.db (defaults to ~/.config/kelvin/tasks.db if not specified)
     #[serde(default)]
     pub data_file: Option<String>,
 }
@@ -62,14 +62,14 @@ impl Config {
         Ok(Self::kelvin_dir()?.join("config.toml"))
     }
 
-    /// Gets the path to tasks.json (can be overridden in the configuration)
+    /// Gets the path to tasks.db (can be overridden in the configuration)
     pub fn data_file_path(&self) -> Result<PathBuf> {
         match &self.storage.data_file {
             Some(custom_path) => {
                 let path = PathBuf::from(shellexpand::tilde(custom_path).as_ref());
                 Ok(path)
             }
-            None => Ok(Self::kelvin_dir()?.join("tasks.json")),
+            None => Ok(Self::kelvin_dir()?.join("tasks.db")),
         }
     }
 }

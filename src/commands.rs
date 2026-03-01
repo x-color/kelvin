@@ -91,9 +91,6 @@ fn cmd_add(
     due_date_spec: Option<&str>,
     today: chrono::NaiveDate,
 ) -> Result<()> {
-    let mut tasks = store.load()?;
-    let id = TaskStore::next_id(&tasks);
-
     let (task_state, thaw_date) = match thaw_date_spec {
         Some(spec) => {
             let date = parse_date_spec(spec, today)?;
@@ -107,16 +104,23 @@ fn cmd_add(
         None => None,
     };
 
-    let task = Task {
-        id,
-        title: title.to_string(),
-        description: description.unwrap_or_default().to_string(),
-        state: task_state,
-        thaw_date,
-        due_date,
-        created_at: today,
-        note: None,
-    };
+    let task = store.update(|tasks| {
+        let id = TaskStore::next_id(tasks);
+
+        let task = Task {
+            id,
+            title: title.to_string(),
+            description: description.unwrap_or_default().to_string(),
+            state: task_state,
+            thaw_date,
+            due_date,
+            created_at: today,
+            note: None,
+        };
+
+        tasks.push(task.clone());
+        Ok(task)
+    })?;
 
     println!(
         "Added task {} [{}]: {}",
@@ -125,8 +129,6 @@ fn cmd_add(
         task.title
     );
 
-    tasks.push(task);
-    store.save(&tasks)?;
     Ok(())
 }
 
@@ -139,23 +141,26 @@ fn cmd_edit(
     new_due_date: Option<&str>,
     today: chrono::NaiveDate,
 ) -> Result<()> {
-    let mut tasks = store.load()?;
-    state::auto_warm(&mut tasks, today);
+    let task = store.update(|tasks| {
+        state::auto_warm(tasks, today);
 
-    let task = tasks
-        .iter_mut()
-        .find(|t| t.id == id)
-        .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+        let task = tasks
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
 
-    if let Some(title) = new_title {
-        task.title = title.to_string();
-    }
-    if let Some(desc) = new_description {
-        task.description = desc.to_string();
-    }
-    if let Some(spec) = new_due_date {
-        task.due_date = Some(parse_date_spec(spec, today)?);
-    }
+        if let Some(title) = new_title {
+            task.title = title.to_string();
+        }
+        if let Some(desc) = new_description {
+            task.description = desc.to_string();
+        }
+        if let Some(spec) = new_due_date {
+            task.due_date = Some(parse_date_spec(spec, today)?);
+        }
+
+        Ok(task.clone())
+    })?;
 
     println!(
         "Updated task {} [{}]: {}",
@@ -164,20 +169,19 @@ fn cmd_edit(
         task.title
     );
 
-    store.save(&tasks)?;
     Ok(())
 }
 
 /// Shows task details
 fn cmd_show(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
-    let mut tasks = store.load()?;
-    state::auto_warm(&mut tasks, today);
-    store.save(&tasks)?;
-
-    let task = tasks
-        .iter()
-        .find(|t| t.id == id)
-        .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+    let task = store.update(|tasks| {
+        state::auto_warm(tasks, today);
+        let task = tasks
+            .iter()
+            .find(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+        Ok(task.clone())
+    })?;
 
     println!("{:<14} {}", "ID:".bold(), task.id);
     println!("{:<14} {}", "Title:".bold(), task.title);
@@ -198,11 +202,11 @@ fn cmd_show(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
 /// Lists tasks
 /// Column order: ID, Task, State, Thaw Date, Due Date
 fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) -> Result<()> {
-    let mut tasks = store.load()?;
-    let warmed = state::auto_warm(&mut tasks, today);
-    if warmed > 0 {
-        store.save(&tasks)?;
-    }
+    // If auto_warm triggers, we need an update. Let's just use update always.
+    let tasks = store.update(|tasks| {
+        state::auto_warm(tasks, today);
+        Ok(tasks.clone())
+    })?;
 
     let filtered: Vec<&Task> = if all {
         tasks.iter().collect()
@@ -263,21 +267,23 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
 
 /// Melting/Iced -> Melted
 fn cmd_warm(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
-    let mut tasks = store.load()?;
-    state::auto_warm(&mut tasks, today);
+    let task = store.update(|tasks| {
+        state::auto_warm(tasks, today);
 
-    let task = tasks
-        .iter_mut()
-        .find(|t| t.id == id)
-        .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+        let task = tasks
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
 
-    state::warm(task)?;
+        state::warm(task)?;
+        Ok(task.clone())
+    })?;
+
     println!(
         "Warmed task {} [{}]: {}",
         task.id, task.state, task.title
     );
 
-    store.save(&tasks)?;
     Ok(())
 }
 
@@ -289,50 +295,58 @@ fn cmd_burn(
     note: Option<String>,
     today: chrono::NaiveDate,
 ) -> Result<()> {
-    let mut tasks = store.load()?;
-    state::auto_warm(&mut tasks, today);
+    let (task, completely_burned) = store.update(|tasks| {
+        state::auto_warm(tasks, today);
 
-    if completely {
-        let pos = tasks
-            .iter()
-            .position(|t| t.id == id)
-            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
-        let task = tasks.remove(pos);
+        if completely {
+            let pos = tasks
+                .iter()
+                .position(|t| t.id == id)
+                .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+            let task = tasks.remove(pos);
+            Ok((task, completely))
+        } else {
+            let task = tasks
+                .iter_mut()
+                .find(|t| t.id == id)
+                .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+
+            state::burn(task, note)?;
+            Ok((task.clone(), completely))
+        }
+    })?;
+
+    if completely_burned {
         println!("Completely burned task {}: {}", task.id, task.title);
     } else {
-        let task = tasks
-            .iter_mut()
-            .find(|t| t.id == id)
-            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
-
-        state::burn(task, note)?;
         println!(
             "Burned task {} [{}]: {}",
             task.id, task.state, task.title
         );
     }
 
-    store.save(&tasks)?;
     Ok(())
 }
 
 /// Evaporated -> Melted
 fn cmd_cool(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> {
-    let mut tasks = store.load()?;
-    state::auto_warm(&mut tasks, today);
+    let task = store.update(|tasks| {
+        state::auto_warm(tasks, today);
 
-    let task = tasks
-        .iter_mut()
-        .find(|t| t.id == id)
-        .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+        let task = tasks
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
 
-    state::cool(task)?;
+        state::cool(task)?;
+        Ok(task.clone())
+    })?;
+
     println!(
         "Cooled task {} [{}]: {}",
         task.id, task.state, task.title
     );
 
-    store.save(&tasks)?;
     Ok(())
 }
 
@@ -344,14 +358,6 @@ fn cmd_freeze(
     today: chrono::NaiveDate,
     config: &Config,
 ) -> Result<()> {
-    let mut tasks = store.load()?;
-    state::auto_warm(&mut tasks, today);
-
-    let task = tasks
-        .iter_mut()
-        .find(|t| t.id == id)
-        .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
-
     let thaw_date = match thaw_date_spec {
         Some(spec) => parse_date_spec(spec, today)?,
         None => {
@@ -362,12 +368,22 @@ fn cmd_freeze(
         }
     };
 
-    state::freeze(task, thaw_date)?;
+    let task = store.update(|tasks| {
+        state::auto_warm(tasks, today);
+
+        let task = tasks
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
+
+        state::freeze(task, thaw_date)?;
+        Ok(task.clone())
+    })?;
+
     println!(
         "Froze task {} [{}] until {}: {}",
         task.id, task.state, thaw_date, task.title
     );
 
-    store.save(&tasks)?;
     Ok(())
 }

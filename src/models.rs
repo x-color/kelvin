@@ -24,6 +24,21 @@ impl fmt::Display for TaskState {
     }
 }
 
+impl std::str::FromStr for TaskState {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let state = match s {
+            "Iced" => TaskState::Iced,
+            "Melting" => TaskState::Melting,
+            "Melted" => TaskState::Melted,
+            "Evaporated" => TaskState::Evaporated,
+            _ => anyhow::bail!("Invalid task state: {s}"),
+        };
+        Ok(state)
+    }
+}
+
 /// Task
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -101,21 +116,4 @@ mod tests {
         assert_eq!(format!("{}", TaskState::Evaporated), "Evaporated");
     }
 
-    #[test]
-    fn task_serialization_roundtrip() {
-        let task = Task {
-            id: 1,
-            title: "Test".to_string(),
-            description: String::new(),
-            state: TaskState::Melted,
-            thaw_date: None,
-            due_date: None,
-            created_at: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
-            note: None,
-        };
-        let json = serde_json::to_string(&task).unwrap();
-        let deserialized: Task = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.id, task.id);
-        assert_eq!(deserialized.state, task.state);
-    }
 }
