@@ -37,10 +37,11 @@ pub fn warm(task: &mut Task) -> Result<()> {
 }
 
 /// Melted/Melting/Iced -> Evaporated: Complete (evaporate) the task.
-pub fn burn(task: &mut Task) -> Result<()> {
+pub fn burn(task: &mut Task, note: Option<String>) -> Result<()> {
     match task.state {
         TaskState::Melted | TaskState::Melting | TaskState::Iced => {
             task.state = TaskState::Evaporated;
+            task.note = note;
             Ok(())
         }
         _ => bail!(
@@ -57,6 +58,7 @@ pub fn cool(task: &mut Task) -> Result<()> {
         TaskState::Evaporated => {
             task.state = TaskState::Melted;
             task.thaw_date = None;
+            task.note = None;
             Ok(())
         }
         _ => bail!(
@@ -88,6 +90,7 @@ mod tests {
             thaw_date,
             due_date: None,
             created_at: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+            note: None,
         }
     }
 
@@ -160,15 +163,17 @@ mod tests {
     #[test]
     fn burn_melted_to_evaporated() {
         let mut task = make_task(TaskState::Melted, None);
-        burn(&mut task).unwrap();
+        burn(&mut task, Some("Done!".to_string())).unwrap();
         assert_eq!(task.state, TaskState::Evaporated);
+        assert_eq!(task.note, Some("Done!".to_string()));
     }
 
     #[test]
     fn burn_melting_to_evaporated() {
         let mut task = make_task(TaskState::Melting, None);
-        burn(&mut task).unwrap();
+        burn(&mut task, None).unwrap();
         assert_eq!(task.state, TaskState::Evaporated);
+        assert_eq!(task.note, None);
     }
 
     #[test]
@@ -177,14 +182,14 @@ mod tests {
             TaskState::Iced,
             Some(NaiveDate::from_ymd_opt(2026, 1, 1).unwrap()),
         );
-        burn(&mut task).unwrap();
+        burn(&mut task, None).unwrap();
         assert_eq!(task.state, TaskState::Evaporated);
     }
 
     #[test]
     fn burn_evaporated_fails() {
         let mut task = make_task(TaskState::Evaporated, None);
-        assert!(burn(&mut task).is_err());
+        assert!(burn(&mut task, None).is_err());
     }
 
     // --- cool ---
@@ -194,9 +199,11 @@ mod tests {
             TaskState::Evaporated,
             Some(NaiveDate::from_ymd_opt(2026, 1, 5).unwrap()),
         );
+        task.note = Some("Some note".to_string());
         cool(&mut task).unwrap();
         assert_eq!(task.state, TaskState::Melted);
         assert_eq!(task.thaw_date, None);
+        assert_eq!(task.note, None);
     }
 
     #[test]

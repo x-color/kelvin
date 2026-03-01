@@ -34,6 +34,7 @@ pub struct Task {
     pub thaw_date: Option<NaiveDate>,
     pub due_date: Option<NaiveDate>,
     pub created_at: NaiveDate,
+    pub note: Option<String>,
 }
 
 /// Parses a date specification string, either relative ("3d", "1w") or absolute ("2026-03-01"), into a NaiveDate.
@@ -110,6 +111,7 @@ mod tests {
             thaw_date: None,
             due_date: None,
             created_at: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+            note: None,
         };
         let json = serde_json::to_string(&task).unwrap();
         let deserialized: Task = serde_json::from_str(&json).unwrap();

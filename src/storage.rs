@@ -72,6 +72,7 @@ mod tests {
             thaw_date: None,
             due_date: None,
             created_at: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+            note: None,
         }
     }
 

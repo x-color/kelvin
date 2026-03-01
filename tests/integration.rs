@@ -534,7 +534,7 @@ fn burn_completely_evaporated_task() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Completely burned"));
 
-    // Gone from storage
+// Gone from storage
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -543,5 +543,78 @@ fn burn_completely_evaporated_task() {
         .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains("AlreadyBurned"));
+}
+
+#[test]
+fn burn_with_note() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "TaskToBurn"])
+        .output()
+        .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["burn", "1", "-n", "Finished early!"])
+        .output()
+        .expect("Failed to execute kelvin burn -n");
+    assert!(output.status.success());
+
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["show", "1"])
+        .output()
+        .expect("Failed to execute kelvin show");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Finished early!"));
+}
+
+#[test]
+fn cool_clears_note() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "TaskToCool"])
+        .output()
+        .unwrap();
+
+    // Burn with note
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["burn", "1", "-n", "Should be cleared"])
+        .output()
+        .unwrap();
+
+    // Cool it back to Melted
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["cool", "1"])
+        .output()
+        .expect("Failed to execute kelvin cool");
+    assert!(output.status.success());
+
+    // Show and verify note is gone
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["show", "1"])
+        .output()
+        .expect("Failed to execute kelvin show");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(!stdout.contains("Note:"));
+    assert!(!stdout.contains("Should be cleared"));
 }
 

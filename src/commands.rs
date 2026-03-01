@@ -68,7 +68,11 @@ pub fn execute(command: Commands) -> Result<()> {
         Commands::Show { id } => cmd_show(&store, id, today)?,
         Commands::List { iced, all } => cmd_list(&store, iced, all, today)?,
         Commands::Warm { id } => cmd_warm(&store, id, today)?,
-        Commands::Burn { id, completely } => cmd_burn(&store, id, completely, today)?,
+        Commands::Burn {
+            id,
+            completely,
+            note,
+        } => cmd_burn(&store, id, completely, note, today)?,
         Commands::Cool { id } => cmd_cool(&store, id, today)?,
         Commands::Freeze { id, thaw_date } => {
             cmd_freeze(&store, id, thaw_date.as_deref(), today, &config)?
@@ -111,6 +115,7 @@ fn cmd_add(
         thaw_date,
         due_date,
         created_at: today,
+        note: None,
     };
 
     println!(
@@ -178,6 +183,9 @@ fn cmd_show(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
     println!("{:<14} {}", "Title:".bold(), task.title);
     if !task.description.is_empty() {
         println!("{:<14} {}", "Description:".bold(), task.description);
+    }
+    if let Some(note) = &task.note {
+        println!("{:<14} {}", "Note:".bold(), note);
     }
     println!("{:<14} {}", "State:".bold(), colored_state(task.state));
     println!("{:<14} {}", "Thaw Date:".bold(), date_str(task.thaw_date));
@@ -274,7 +282,13 @@ fn cmd_warm(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
 }
 
 /// Melted/Iced -> Evaporated, or permanently delete the task with completely=true
-fn cmd_burn(store: &TaskStore, id: u32, completely: bool, today: chrono::NaiveDate) -> Result<()> {
+fn cmd_burn(
+    store: &TaskStore,
+    id: u32,
+    completely: bool,
+    note: Option<String>,
+    today: chrono::NaiveDate,
+) -> Result<()> {
     let mut tasks = store.load()?;
     state::auto_warm(&mut tasks, today);
 
@@ -291,7 +305,7 @@ fn cmd_burn(store: &TaskStore, id: u32, completely: bool, today: chrono::NaiveDa
             .find(|t| t.id == id)
             .ok_or_else(|| anyhow::anyhow!("Task {id} not found"))?;
 
-        state::burn(task)?;
+        state::burn(task, note)?;
         println!(
             "Burned task {} [{}]: {}",
             task.id, task.state, task.title

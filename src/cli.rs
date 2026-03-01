@@ -69,6 +69,9 @@ pub enum Commands {
         /// Permanently delete the task instead of moving it to Evaporated
         #[arg(short = 'c', long = "completely")]
         completely: bool,
+        /// Optional note to explain the state change
+        #[arg(short = 'n', long = "note")]
+        note: Option<String>,
     },
 
     /// Cancel completion (Evaporated -> Melted)
