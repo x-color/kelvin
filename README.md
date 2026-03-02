@@ -102,10 +102,6 @@ When you run `kelvin list` or `kelvin show`, tasks whose thaw date has passed ar
 Config file: `~/.config/kelvin/config.toml`
 
 ```toml
-[defaults]
-# Default thaw period for `freeze` when -d is not specified
-thaw_days = 7
-
 [storage]
 # Custom path for the tasks data file (optional)
 # data_file = "~/my-tasks/kelvin.db"

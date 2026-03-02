@@ -84,8 +84,8 @@ pub enum Commands {
     Freeze {
         /// Task ID
         id: u32,
-        /// Thaw date (e.g., 3d, 1w, 2026-03-01)
+        /// Thaw date (e.g., 3d, 1w, 2026-03-01). Required.
         #[arg(short = 'd', long = "date")]
-        thaw_date: Option<String>,
+        thaw_date: String,
     },
 }

@@ -29,7 +29,8 @@ fn colored_state_padded(state: TaskState, width: usize) -> String {
 
 /// Converts a date to a string (None becomes "-")
 fn date_str(date: Option<chrono::NaiveDate>) -> String {
-    date.map(|d| d.to_string()).unwrap_or_else(|| "-".to_string())
+    date.map(|d| d.to_string())
+        .unwrap_or_else(|| "-".to_string())
 }
 
 /// Main dispatcher for command execution
@@ -74,9 +75,7 @@ pub fn execute(command: Commands) -> Result<()> {
             note,
         } => cmd_burn(&store, id, completely, note, today)?,
         Commands::Cool { id } => cmd_cool(&store, id, today)?,
-        Commands::Freeze { id, thaw_date } => {
-            cmd_freeze(&store, id, thaw_date.as_deref(), today, &config)?
-        }
+        Commands::Freeze { id, thaw_date } => cmd_freeze(&store, id, &thaw_date, today)?,
     }
 
     Ok(())
@@ -122,12 +121,7 @@ fn cmd_add(
         Ok(task)
     })?;
 
-    println!(
-        "Added task {} [{}]: {}",
-        task.id,
-        task.state,
-        task.title
-    );
+    println!("Added task {} [{}]: {}", task.id, task.state, task.title);
 
     Ok(())
 }
@@ -162,12 +156,7 @@ fn cmd_edit(
         Ok(task.clone())
     })?;
 
-    println!(
-        "Updated task {} [{}]: {}",
-        task.id,
-        task.state,
-        task.title
-    );
+    println!("Updated task {} [{}]: {}", task.id, task.state, task.title);
 
     Ok(())
 }
@@ -279,10 +268,7 @@ fn cmd_warm(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
         Ok(task.clone())
     })?;
 
-    println!(
-        "Warmed task {} [{}]: {}",
-        task.id, task.state, task.title
-    );
+    println!("Warmed task {} [{}]: {}", task.id, task.state, task.title);
 
     Ok(())
 }
@@ -319,10 +305,7 @@ fn cmd_burn(
     if completely_burned {
         println!("Completely burned task {}: {}", task.id, task.title);
     } else {
-        println!(
-            "Burned task {} [{}]: {}",
-            task.id, task.state, task.title
-        );
+        println!("Burned task {} [{}]: {}", task.id, task.state, task.title);
     }
 
     Ok(())
@@ -342,10 +325,7 @@ fn cmd_cool(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
         Ok(task.clone())
     })?;
 
-    println!(
-        "Cooled task {} [{}]: {}",
-        task.id, task.state, task.title
-    );
+    println!("Cooled task {} [{}]: {}", task.id, task.state, task.title);
 
     Ok(())
 }
@@ -354,19 +334,10 @@ fn cmd_cool(store: &TaskStore, id: u32, today: chrono::NaiveDate) -> Result<()> 
 fn cmd_freeze(
     store: &TaskStore,
     id: u32,
-    thaw_date_spec: Option<&str>,
+    thaw_date_spec: &str,
     today: chrono::NaiveDate,
-    config: &Config,
 ) -> Result<()> {
-    let thaw_date = match thaw_date_spec {
-        Some(spec) => parse_date_spec(spec, today)?,
-        None => {
-            // Get the default number of thaw days from config
-            today
-                .checked_add_days(chrono::Days::new(config.defaults.thaw_days as u64))
-                .ok_or_else(|| anyhow::anyhow!("Date overflow"))?
-        }
-    };
+    let thaw_date = parse_date_spec(thaw_date_spec, today)?;
 
     let task = store.update(|tasks| {
         state::auto_warm(tasks, today);
