@@ -33,7 +33,7 @@ impl TaskStore {
         }
         let conn = Connection::open(&self.path)
             .with_context(|| format!("Failed to open database {}", self.path.display()))?;
-        
+
         conn.execute(
             "CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY,
@@ -46,12 +46,13 @@ impl TaskStore {
                 note TEXT
             )",
             [],
-        ).with_context(|| "Failed to initialize tasks table schema")?;
-        
+        )
+        .with_context(|| "Failed to initialize tasks table schema")?;
+
         Ok(conn)
     }
 
-    /// Load the task list for read-only purposes
+    #[cfg(test)]
     pub fn load(&self) -> Result<Vec<Task>> {
         if !self.path.exists() {
             return Ok(Vec::new());
@@ -62,7 +63,7 @@ impl TaskStore {
 
     fn load_from_conn(conn: &Connection) -> Result<Vec<Task>> {
         let mut stmt = conn.prepare("SELECT id, title, description, state, thaw_date, due_date, created_at, note FROM tasks ORDER BY id ASC")?;
-        
+
         let task_iter = stmt.query_map([], |row| {
             let id: u32 = row.get(0)?;
             let title: String = row.get(1)?;
@@ -74,9 +75,12 @@ impl TaskStore {
             let note: Option<String> = row.get(7)?;
 
             let state = TaskState::from_str(&state_str).unwrap_or(TaskState::Melted);
-            let thaw_date = thaw_date_str.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
-            let due_date = due_date_str.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
-            let created_at = NaiveDate::parse_from_str(&created_at_str, "%Y-%m-%d").unwrap_or_default();
+            let thaw_date =
+                thaw_date_str.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+            let due_date =
+                due_date_str.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+            let created_at =
+                NaiveDate::parse_from_str(&created_at_str, "%Y-%m-%d").unwrap_or_default();
 
             Ok(Task {
                 id,
@@ -94,7 +98,7 @@ impl TaskStore {
         for task in task_iter {
             tasks.push(task?);
         }
-        
+
         Ok(tasks)
     }
 
@@ -104,18 +108,18 @@ impl TaskStore {
         F: FnOnce(&mut Vec<Task>) -> Result<R>,
     {
         let mut conn = self.init_db()?;
-        
+
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Exclusive)?;
-        
+
         // 1. Load current tasks
         let mut tasks = Self::load_from_conn(&tx)?;
-        
+
         // 2. Perform the update via the closure
         let result = f(&mut tasks)?;
-        
+
         // 3. Delete existing tasks and re-insert the new state
         tx.execute("DELETE FROM tasks", [])?;
-        
+
         {
             let mut stmt = tx.prepare(
                 "INSERT INTO tasks (id, title, description, state, thaw_date, due_date, created_at, note)
@@ -125,7 +129,7 @@ impl TaskStore {
                 let thaw_date_str = task.thaw_date.map(|d| d.format("%Y-%m-%d").to_string());
                 let due_date_str = task.due_date.map(|d| d.format("%Y-%m-%d").to_string());
                 let created_at_str = task.created_at.format("%Y-%m-%d").to_string();
-                
+
                 stmt.execute(params![
                     task.id,
                     task.title,
@@ -138,9 +142,9 @@ impl TaskStore {
                 ])?;
             }
         }
-        
+
         tx.commit()?;
-        
+
         Ok(result)
     }
 
@@ -159,7 +163,7 @@ impl TaskStore {
                 let thaw_date_str = task.thaw_date.map(|d| d.format("%Y-%m-%d").to_string());
                 let due_date_str = task.due_date.map(|d| d.format("%Y-%m-%d").to_string());
                 let created_at_str = task.created_at.format("%Y-%m-%d").to_string();
-                
+
                 stmt.execute(params![
                     task.id,
                     task.title,
@@ -185,7 +189,7 @@ impl TaskStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{TaskState, Task};
+    use crate::models::{Task, TaskState};
     use chrono::NaiveDate;
 
     fn sample_task(id: u32) -> Task {
@@ -229,20 +233,24 @@ mod tests {
         let path = dir.path().join("tasks.db");
         let store = TaskStore::new_with_path(path.clone());
 
-        store.update(|tasks| {
-            tasks.push(sample_task(1));
-            tasks.push(sample_task(2));
-            Ok(())
-        }).unwrap();
+        store
+            .update(|tasks| {
+                tasks.push(sample_task(1));
+                tasks.push(sample_task(2));
+                Ok(())
+            })
+            .unwrap();
 
         let loaded = store.load().unwrap();
         assert_eq!(loaded.len(), 2);
-        
-        store.update(|tasks| {
-            tasks.remove(0);
-            Ok(())
-        }).unwrap();
-        
+
+        store
+            .update(|tasks| {
+                tasks.remove(0);
+                Ok(())
+            })
+            .unwrap();
+
         let loaded = store.load().unwrap();
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].id, 2);
