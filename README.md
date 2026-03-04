@@ -15,7 +15,7 @@ Instead of a traditional TODO list (done/not done), Kelvin manages tasks through
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Iced: add -d (With Date)
+    [*] --> Iced: add -t (With Thaw Date)
     [*] --> Melted: add (No Date)
     Iced --> Melting: auto [Date Reached]
     Iced --> Melted: warm
@@ -44,7 +44,7 @@ cargo install --path .
 kelvin add "Fix login bug"
 
 # Add a task with a thaw date (Iced, thaws in 3 days)
-kelvin add "Write yearly report" -d 3d
+kelvin add "Write yearly report" -t 3d
 
 # Add with description and due date
 kelvin add "Deploy to production" --desc "Final release" --due 2026-03-01

@@ -67,7 +67,7 @@ fn add_iced_and_list_iced() {
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["add", "Future task", "-d", "7d"])
+        .args(["add", "Future task", "-t", "7d"])
         .output()
         .expect("Failed to execute kelvin add");
     assert!(output.status.success());
@@ -215,7 +215,7 @@ fn freeze_and_warm() {
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["freeze", "1", "-d", "7d"])
+        .args(["freeze", "1", "-t", "7d"])
         .output()
         .expect("Failed to execute kelvin freeze");
     assert!(output.status.success());
@@ -270,7 +270,7 @@ fn edit_task_title() {
 
 // ── Thaw-date ownership tests ─────────────────────────────────────────────────
 
-/// `edit` must reject the `--date` / `-d` flag; thaw date is owned by `freeze`.
+/// `edit` must reject the `--thaw` / `-t` flag; thaw date is owned by `freeze`.
 #[test]
 fn edit_rejects_date_flag() {
     let dir = tempfile::tempdir().unwrap();
@@ -284,17 +284,17 @@ fn edit_rejects_date_flag() {
         .output()
         .unwrap();
 
-    // Attempt to pass --date to edit; clap should reject this as an unknown flag.
+    // Attempt to pass --thaw to edit; clap should reject this as an unknown flag.
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["edit", "1", "--date", "7d"])
+        .args(["edit", "1", "--thaw", "7d"])
         .output()
         .expect("Failed to execute kelvin edit");
 
     assert!(
         !output.status.success(),
-        "edit --date should fail; thaw date must not be editable via `edit`"
+        "edit --thaw should fail; thaw date must not be editable via `edit`"
     );
 }
 
@@ -315,7 +315,7 @@ fn freeze_sets_thaw_date_and_iced_state() {
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["freeze", "1", "--date", "30d"])
+        .args(["freeze", "1", "--thaw", "30d"])
         .output()
         .expect("Failed to execute kelvin freeze");
 
@@ -367,7 +367,7 @@ fn edit_title_does_not_change_thaw_date() {
     Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["freeze", "1", "--date", "30d"])
+        .args(["freeze", "1", "--thaw", "30d"])
         .output()
         .unwrap();
 
@@ -534,7 +534,7 @@ fn burn_completely_evaporated_task() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Completely burned"));
 
-// Gone from storage
+    // Gone from storage
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
@@ -617,4 +617,3 @@ fn cool_clears_note() {
     assert!(!stdout.contains("Note:"));
     assert!(!stdout.contains("Should be cleared"));
 }
-

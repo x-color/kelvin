@@ -18,10 +18,10 @@ pub enum Commands {
         #[arg(long = "desc")]
         description: Option<String>,
         /// Thaw date (e.g., 3d, 1w, 2026-03-01). If specified, the task is created in Iced state.
-        #[arg(short = 'd', long = "date")]
+        #[arg(short = 't', long = "thaw")]
         thaw_date: Option<String>,
         /// Due date (e.g., 3d, 1w, 2026-03-01)
-        #[arg(long = "due")]
+        #[arg(short = 'd', long = "due")]
         due_date: Option<String>,
     },
 
@@ -85,7 +85,7 @@ pub enum Commands {
         /// Task ID
         id: u32,
         /// Thaw date (e.g., 3d, 1w, 2026-03-01). Required.
-        #[arg(short = 'd', long = "date")]
+        #[arg(short = 't', long = "thaw")]
         thaw_date: String,
     },
 }
