@@ -545,6 +545,91 @@ fn burn_completely_evaporated_task() {
     assert!(!stdout.contains("AlreadyBurned"));
 }
 
+/// `list` displays Japanese titles correctly without column misalignment.
+#[test]
+fn list_japanese_title() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    // Add a task with Japanese title
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "日本語タスク"])
+        .output()
+        .expect("Failed to execute kelvin add");
+    assert!(output.status.success());
+
+    // List tasks
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list"])
+        .output()
+        .expect("Failed to execute kelvin list");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("日本語タスク"));
+}
+
+/// `list` displays emoji titles correctly without column misalignment.
+#[test]
+fn list_emoji_title() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    // Add tasks with emoji titles
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "🎉イベント"])
+        .output()
+        .expect("Failed to execute kelvin add");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "🚨重要"])
+        .output()
+        .expect("Failed to execute kelvin add");
+
+    // List tasks
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list"])
+        .output()
+        .expect("Failed to execute kelvin list");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("🎉イベント"));
+    assert!(stdout.contains("🚨重要"));
+}
+
+/// `list` displays emoji like 😊 correctly without column misalignment.
+#[test]
+fn list_smiling_emoji() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_dir = dir.path().join(".config");
+
+    Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["add", "テストタスク。😊"])
+        .output()
+        .expect("Failed to execute kelvin add");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
+        .env("HOME", dir.path())
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["list"])
+        .output()
+        .expect("Failed to execute kelvin list");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("テストタスク。😊"));
+}
+
 #[test]
 fn burn_with_note() {
     let dir = tempfile::tempdir().unwrap();

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use chrono::Local;
 use colored::Colorize;
+use unicode_display_width::width;
 
 use crate::cli::Commands;
 use crate::config::Config;
@@ -20,10 +21,10 @@ fn colored_state(state: TaskState) -> String {
 }
 
 /// Pads a colored string to a specified width (adds spaces outside the ANSI codes)
-fn colored_state_padded(state: TaskState, width: usize) -> String {
-    let visible_len = state.to_string().len();
+fn colored_state_padded(state: TaskState, total_width: usize) -> String {
+    let visible_len = width(state.to_string().as_str()) as usize;
     let colored = colored_state(state);
-    let padding = width.saturating_sub(visible_len);
+    let padding = total_width.saturating_sub(visible_len);
     format!("{colored}{}", " ".repeat(padding))
 }
 
@@ -31,6 +32,13 @@ fn colored_state_padded(state: TaskState, width: usize) -> String {
 fn date_str(date: Option<chrono::NaiveDate>) -> String {
     date.map(|d| d.to_string())
         .unwrap_or_else(|| "-".to_string())
+}
+
+/// Pads a string to a specified display width (not byte length)
+fn pad_display_width(s: &str, total_width: usize) -> String {
+    let display_width = width(s) as usize;
+    let padding = total_width.saturating_sub(display_width);
+    format!("{}{}", s, " ".repeat(padding))
 }
 
 /// Main dispatcher for command execution
@@ -221,7 +229,7 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
     let id_w = 5;
     let task_w = filtered
         .iter()
-        .map(|t| t.title.len())
+        .map(|t| width(t.title.as_str()) as usize)
         .max()
         .unwrap_or(4)
         .max(4); // At least the length of "Task"
@@ -232,7 +240,7 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
     println!(
         "{}  {}  {}  {}  {}",
         format!("{:<id_w$}", "ID").bold(),
-        format!("{:<task_w$}", "Task").bold(),
+        pad_display_width("Task", task_w).bold(),
         format!("{:<state_w$}", "State").bold(),
         format!("{:<date_w$}", "Thaw Date").bold(),
         "Due Date".bold(),
@@ -242,12 +250,12 @@ fn cmd_list(store: &TaskStore, iced: bool, all: bool, today: chrono::NaiveDate) 
 
     for task in &filtered {
         println!(
-            "{:<id_w$}  {:<task_w$}  {}  {:<date_w$}  {}",
-            task.id,
-            task.title,
+            "{}  {}  {}  {}  {}",
+            format!("{:<id_w$}", task.id),
+            pad_display_width(&task.title, task_w),
             colored_state_padded(task.state, state_w),
-            date_str(task.thaw_date),
-            date_str(task.due_date),
+            pad_display_width(&date_str(task.thaw_date), date_w),
+            pad_display_width(&date_str(task.due_date), date_w),
         );
     }
 
