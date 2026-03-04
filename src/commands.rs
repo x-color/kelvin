@@ -5,7 +5,7 @@ use unicode_display_width::width;
 
 use crate::cli::Commands;
 use crate::config::Config;
-use crate::models::{parse_date_spec, Task, TaskState};
+use crate::models::{Task, TaskState, parse_date_spec};
 use crate::state;
 use crate::storage::TaskStore;
 

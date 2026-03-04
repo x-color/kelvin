@@ -115,5 +115,4 @@ mod tests {
         assert_eq!(format!("{}", TaskState::Melted), "Melted");
         assert_eq!(format!("{}", TaskState::Evaporated), "Evaporated");
     }
-
 }

@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 use crate::config::Config;
 use crate::models::{Task, TaskState};

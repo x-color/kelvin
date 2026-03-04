@@ -30,13 +30,13 @@ pub enum Commands {
         /// Task ID
         id: u32,
         /// New title
-        #[arg(short = 't', long = "title")]
+        #[arg(long = "title")]
         title: Option<String>,
         /// New description
         #[arg(long = "desc")]
         description: Option<String>,
         /// Change the due date (e.g., 3d, 1w, 2026-03-01)
-        #[arg(long = "due")]
+        #[arg(short = 'd', long = "due")]
         due_date: Option<String>,
     },
 

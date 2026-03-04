@@ -249,7 +249,7 @@ fn edit_task_title() {
     let output = Command::new(env!("CARGO_BIN_EXE_kelvin"))
         .env("HOME", dir.path())
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["edit", "1", "-t", "New title"])
+        .args(["edit", "1", "--title", "New title"])
         .output()
         .expect("Failed to execute kelvin edit");
     assert!(output.status.success());
