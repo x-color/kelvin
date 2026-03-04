@@ -79,15 +79,15 @@ kelvin burn <id>          # Melted/Melting/Iced → Evaporated (done!)
 kelvin burn <id> -n "msg" # Add a note when completing a task
 kelvin burn <id> -c       # Completely delete a task
 kelvin cool <id>          # Evaporated → Melted (undo)
-kelvin freeze <id> -d 5d  # Any → Iced (postpone)
+kelvin freeze <id> -t 5d  # Any → Iced (postpone)
 ```
 
 ### Editing & Viewing
 
 ```bash
-kelvin edit <id> -t "New title"
+kelvin edit <id> --title "New title"
 kelvin edit <id> --desc "Updated description"
-kelvin edit <id> --due 2026-04-01
+kelvin edit <id> -d 2026-04-01
 kelvin show <id>
 ```
 
